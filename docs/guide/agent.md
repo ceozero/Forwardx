@@ -28,6 +28,26 @@ curl -fsSL https://panel.example.com/api/agent/install.sh | bash -s -- install Y
 
 安装器默认选择兼容的 Realm `2.9.4`，其他版本可通过 `FORWARDX_REALM_VERSION` 显式选择。iperf3 仅用于网络测试，安装失败会警告，不应阻断 Agent 主流程。
 
+### Agent 容器镜像
+
+GitHub Actions 的 **Docker Agent Image** 工作流每天 UTC `02:17` 和 `14:17` 查询 [最新发布版本](https://github.com/poouo/Forwardx/releases/latest)，校验其 Linux amd64 和 arm64 Agent、FXP 与 Runtime 二进制的 `SHA256SUMS` 后，发布多架构镜像到 `ghcr.io/<仓库所有者>/forwardx-agent`。镜像版本标签与上游发布标签一致，并同时更新 `latest`。定时任务发现同版本镜像已存在时跳过构建；从 Actions 页面手动运行工作流会重新下载最新上游版本并覆盖同名镜像标签。
+
+该镜像面向具备所需网络和内核权限的受管 Linux 主机；使用时应持久化 `/etc/forwardx`、`/var/lib/forwardx-agent` 和 `/var/log/forwardx-agent`，并按实际转发能力授予容器所需权限。
+
+仓库提供 [Agent Compose 示例](../../examples/agent-docker/docker-compose.yml)、[配置模板](../../examples/agent-docker/config.json.example) 和 [镜像环境变量模板](../../examples/agent-docker/.env.example)。在目标 Linux 主机执行：
+
+```bash
+mkdir -p etc-forwardx/agent state logs
+cp config.json.example etc-forwardx/agent/config.json
+cp .env.example .env
+chmod 700 etc-forwardx state logs
+chmod 600 etc-forwardx/agent/config.json .env
+docker compose up -d
+docker compose logs --tail 300 forwardx-agent
+```
+
+将 `config.json` 的 `panelUrl` 替换为 Agent 可访问的面板 HTTPS 地址，并将 `token` 替换为仅绑定该主机的 Token。`proxyUrl` 留空表示直连；需要代理时填写 `http://`、`https://`、`socks5://` 或 `socks5h://` 地址。生产环境在 `.env` 中固定 `FORWARDX_AGENT_IMAGE` 到已发布版本标签。示例使用 host 网络和 `NET_ADMIN`、`NET_RAW` 能力，因此转发端口直接监听宿主机，**不要**再添加 Compose `ports` 映射；该模式需要 rootful Docker，受限 LXC 或 rootless Docker 可能无法提供所需内核权限。
+
 ## 2.1. 按主机使用不同的面板入口
 
 管理员在「主机管理 → 编辑主机 → 其他配置」打开 **Agent 面板连接地址**，填写例如 `https://cn-panel.example.com:8443`。默认关闭，继续使用全局 `panelPublicUrl`；关闭后保留填写的地址，方便下次启用。启用时必须填写完整的 HTTP/HTTPS 地址，可带自定义端口，不支持账号密码、查询参数或片段。

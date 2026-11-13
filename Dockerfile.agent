@@ -1,0 +1,29 @@
+FROM alpine:3.22
+
+ARG TARGETARCH
+ARG FORWARDX_VERSION
+
+LABEL org.opencontainers.image.title="ForwardX Agent" \
+      org.opencontainers.image.description="ForwardX managed-host agent" \
+      org.opencontainers.image.version="${FORWARDX_VERSION}" \
+      org.forwardx.version="${FORWARDX_VERSION}"
+
+RUN apk add --no-cache \
+      bash \
+      ca-certificates \
+      curl \
+      iproute2 \
+      iptables \
+      jq \
+      nftables \
+      procps \
+      tini \
+  && mkdir -p /etc/forwardx/agent /var/lib/forwardx-agent /var/log/forwardx-agent
+
+COPY --chmod=755 agent-image-assets/forwardx-agent-linux-${TARGETARCH} /usr/local/bin/forwardx-agent
+COPY --chmod=755 agent-image-assets/forwardx-fxp-linux-${TARGETARCH} /usr/local/bin/forwardx-fxp
+COPY --chmod=755 agent-image-assets/forwardx-runtime-linux-${TARGETARCH} /usr/local/bin/forwardx-runtime
+
+VOLUME ["/etc/forwardx", "/var/lib/forwardx-agent", "/var/log/forwardx-agent"]
+
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/forwardx-agent"]

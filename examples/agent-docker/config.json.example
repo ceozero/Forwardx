@@ -1,0 +1,6 @@
+{
+  "panelUrl": "https://panel.example.com",
+  "token": "REPLACE_WITH_A_SINGLE_HOST_AGENT_TOKEN",
+  "interval": 30,
+  "proxyUrl": ""
+}

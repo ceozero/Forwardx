@@ -1,0 +1,18 @@
+services:
+  forwardx-agent:
+    image: ${FORWARDX_AGENT_IMAGE:-ghcr.io/ceozero/forwardx-agent:latest}
+    container_name: forwardx-agent
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./etc-forwardx:/etc/forwardx
+      - ./state:/var/lib/forwardx-agent
+      - ./logs:/var/log/forwardx-agent
+    logging:
+      driver: local
+      options:
+        max-size: 20m
+        max-file: "3"
